@@ -22,11 +22,9 @@ macro exit code
 segment readable executable
 entry main
 main:
-repeat 5
-    write 1, msg, msg_len
-end repeat
+    write 1, start, start_len
     exit 0
 
 segment readable
-msg db 'Hello, World!', 10
-msg_len = $ - msg
+start db 'Starting Web Server', 10
+start_len = $ - start
