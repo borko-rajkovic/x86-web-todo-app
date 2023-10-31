@@ -5,6 +5,7 @@ SYS_close equ 3
 SYS_exit equ 60
 SYS_socket equ 41
 SYS_bind equ 49
+SYS_listen equ 50
 
 AF_INET equ 2
 INADDR_ANY equ 0
@@ -15,6 +16,8 @@ STDERR equ 2
 
 EXIT_SUCCESS equ 0
 EXIT_FAILURE equ 1
+
+MAX_CONN equ 5
 
 macro write fd, buf, count
 {
@@ -35,6 +38,13 @@ macro socket domain, type, protocol
     syscall
 }
 
+macro syscall2 number, a, b {
+    mov rax, number
+    mov rdi, a
+    mov rsi, b
+    syscall
+}
+
 macro syscall3 number, a, b, c {
     mov rax, number
     mov rdi, a
@@ -48,6 +58,13 @@ macro syscall3 number, a, b, c {
 macro bind sockfd, addr, addr_len
 {
     syscall3 SYS_bind, sockfd, addr, addr_len
+}
+
+;;    int listen(int sockfd, int backlog);
+
+macro listen sockfd, backlog
+{
+    syscall2 SYS_listen, sockfd, backlog
 }
 
 macro exit code
@@ -94,6 +111,9 @@ main:
     cmp rax, 0
     jl error
 
+    write STDOUT, listen_trace_msg, listen_trace_msg_len
+    listen [sockfd], MAX_CONN
+
     write STDOUT, ok_msg, ok_msg_len
     close [sockfd]
     exit EXIT_SUCCESS
@@ -131,5 +151,7 @@ socket_trace_msg db 'INFO: Creating a socket...', 10
 socket_trace_msg_len = $ - socket_trace_msg
 bind_trace_msg db 'INFO: Binding the socket...', 10
 bind_trace_msg_len = $ - bind_trace_msg
+listen_trace_msg db 'INFO: Listening to the socket...', 10
+listen_trace_msg_len = $ - listen_trace_msg
 error_msg db 'ERROR!', 10
 error_msg_len = $ - error_msg
