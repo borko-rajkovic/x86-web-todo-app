@@ -2,10 +2,11 @@ format ELF64 executable
 
 SYS_write equ 1
 SYS_close equ 3
-SYS_exit equ 60
 SYS_socket equ 41
 SYS_bind equ 49
+SYS_accept equ 43
 SYS_listen equ 50
+SYS_exit equ 60
 
 AF_INET equ 2
 INADDR_ANY equ 0
@@ -19,20 +20,23 @@ EXIT_FAILURE equ 1
 
 MAX_CONN equ 5
 
-macro syscall1 number, a {
+macro syscall1 number, a
+{
     mov rax, number
     mov rdi, a
     syscall
 }
 
-macro syscall2 number, a, b {
+macro syscall2 number, a, b
+{
     mov rax, number
     mov rdi, a
     mov rsi, b
     syscall
 }
 
-macro syscall3 number, a, b, c {
+macro syscall3 number, a, b, c
+{
     mov rax, number
     mov rdi, a
     mov rsi, b
@@ -71,8 +75,15 @@ macro exit code
 }
 
 ;; int close(int fd);
-macro close fd {
+macro close fd
+{
     syscall1 SYS_close, fd
+}
+
+;; int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+macro accept sockfd, addr, addrlen
+{
+    syscall3 SYS_accept, sockfd, addr, addrlen
 }
 
 segment readable executable
@@ -108,13 +119,24 @@ main:
 
     write STDOUT, listen_trace_msg, listen_trace_msg_len
     listen [sockfd], MAX_CONN
+    cmp rax, 0
+    jl error
+
+    write STDOUT, accept_trace_msg, accept_trace_msg_len
+    accept [sockfd], cliaddr.sin_family, cliaddr_len
+    cmp rax, 0
+    jl error
+
+    mov qword [connfd], rax
 
     write STDOUT, ok_msg, ok_msg_len
+    close [connfd]
     close [sockfd]
     exit EXIT_SUCCESS
 
 error:
     write STDERR, error_msg, error_msg_len
+    close [connfd]
     close [sockfd]
     exit EXIT_FAILURE
 
@@ -124,18 +146,26 @@ error:
 ;; dq - 8 byte - 64 bits
 segment readable writeable
 
-sockfd dq 0
+struc servaddr_in
+{
+    .sin_family dw 0
+    .sin_port   dw 0
+    .sin_addr   dd 0
+    .sin_zero   dq 0
+}
+
+sockfd dq -1
+connfd dq -1
 ; struct sockaddr_in {
 ; 	sa_family_t sin_family;     // 16 bits
 ; 	in_port_t sin_port;         // 16 bits
 ; 	struct in_addr sin_addr;    // 32 bits
 ; 	uint8_t sin_zero[8];        // 64 bits
 ; };
-servaddr.sin_family dw 0
-servaddr.sin_port   dw 0
-servaddr.sin_addr   dd 0
-servaddr.sin_zero   dq 0
+servaddr servaddr_in
 sizeof_servaddr = $ - servaddr.sin_family
+cliaddr servaddr_in
+cliaddr_len dd sizeof_servaddr
 
 start db 'INFO: Starting Web Server', 10
 start_len = $ - start
@@ -147,5 +177,7 @@ bind_trace_msg db 'INFO: Binding the socket...', 10
 bind_trace_msg_len = $ - bind_trace_msg
 listen_trace_msg db 'INFO: Listening to the socket...', 10
 listen_trace_msg_len = $ - listen_trace_msg
+accept_trace_msg db 'INFO: Waiting for client connections...', 10
+accept_trace_msg_len = $ - accept_trace_msg
 error_msg db 'ERROR!', 10
 error_msg_len = $ - error_msg
