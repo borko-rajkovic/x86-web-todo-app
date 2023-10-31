@@ -1,6 +1,7 @@
 format ELF64 executable
 
 SYS_write equ 1
+SYS_close equ 3
 SYS_exit equ 60
 SYS_socket equ 41
 SYS_bind equ 49
@@ -56,6 +57,12 @@ macro exit code
     syscall
 }
 
+macro close fd {
+    mov rax, SYS_close
+    mov rdi, fd
+    syscall
+}
+
 segment readable executable
 entry main
 main:
@@ -88,10 +95,12 @@ main:
     jl error
 
     write STDOUT, ok_msg, ok_msg_len
+    close [sockfd]
     exit EXIT_SUCCESS
 
 error:
     write STDERR, error_msg, error_msg_len
+    close [sockfd]
     exit EXIT_FAILURE
 
 ;; db - 1 byte -  8 bits
