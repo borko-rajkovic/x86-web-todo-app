@@ -19,22 +19,9 @@ EXIT_FAILURE equ 1
 
 MAX_CONN equ 5
 
-macro write fd, buf, count
-{
-    mov rax, SYS_write
-    mov rdi, fd
-    mov rsi, buf
-    mov rdx, count
-    syscall
-}
-
-;; int socket(int domain, int type, int protocol);
-macro socket domain, type, protocol
-{
-    mov rax, SYS_socket
-    mov rdi, domain
-    mov rsi, type
-    mov rdx, protocol
+macro syscall1 number, a {
+    mov rax, number
+    mov rdi, a
     syscall
 }
 
@@ -53,31 +40,39 @@ macro syscall3 number, a, b, c {
     syscall
 }
 
-; int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+;; ssize_t write(int fd, const void *buf, size_t count);
+macro write fd, buf, count
+{
+    syscall3 SYS_write, fd, buf, count
+}
 
+;; int socket(int domain, int type, int protocol);
+macro socket domain, type, protocol
+{
+    syscall3 SYS_socket, domain, type, protocol
+}
+
+;; int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
 macro bind sockfd, addr, addr_len
 {
     syscall3 SYS_bind, sockfd, addr, addr_len
 }
 
 ;;    int listen(int sockfd, int backlog);
-
 macro listen sockfd, backlog
 {
     syscall2 SYS_listen, sockfd, backlog
 }
 
+;; void _Exit(int status);
 macro exit code
 {
-    mov rax, SYS_exit
-    mov rdi, code
-    syscall
+    syscall1 SYS_exit, code
 }
 
+;; int close(int fd);
 macro close fd {
-    mov rax, SYS_close
-    mov rdi, fd
-    syscall
+    syscall1 SYS_close, fd
 }
 
 segment readable executable
@@ -127,7 +122,6 @@ error:
 ;; dw - 2 byte - 16 bits
 ;; dd - 4 byte - 32 bits
 ;; dq - 8 byte - 64 bits
-
 segment readable writeable
 
 sockfd dq 0
