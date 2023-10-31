@@ -129,6 +129,8 @@ main:
 
     mov qword [connfd], rax
 
+    write [connfd], hello, hello_len
+
     write STDOUT, ok_msg, ok_msg_len
     close [connfd]
     close [sockfd]
@@ -166,6 +168,9 @@ servaddr servaddr_in
 sizeof_servaddr = $ - servaddr.sin_family
 cliaddr servaddr_in
 cliaddr_len dd sizeof_servaddr
+
+hello db 'Hello from the flat assembler', 10
+hello_len = $ - hello
 
 start db 'INFO: Starting Web Server', 10
 start_len = $ - start
