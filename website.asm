@@ -52,7 +52,7 @@ main:
 
     mov qword [connfd], rax
 
-    write [connfd], response, response_len
+    funcall2 write_cstr, [connfd], index_page_response
     close [connfd]
 
     jmp .next_request
@@ -77,12 +77,11 @@ sizeof_servaddr = $ - servaddr.sin_family
 cliaddr servaddr_in
 cliaddr_len dd sizeof_servaddr
 
-response    db "HTTP/1.1 200 OK", 13, 10 ; instead of newline, we print both cr and nl: 13 = \r 10 = \n
-            db "Content-Type: text/html; charset=utf-8", 13, 10
-            db "Connection: close", 13, 10
-            db 13, 10
-            db "<h1>Hello from the flat assembler</h1>", 13, 10
-response_len = $ - response
+index_page_response  db "HTTP/1.1 200 OK", 13, 10
+                     db "Content-Type: text/html; charset=utf-8", 13, 10
+                     db "Connection: close", 13, 10
+                     db 13, 10
+                     db 0
 
 start            db "INFO: Starting Web Server!", 10, 0
 ok_msg           db "INFO: OK!", 10, 0
