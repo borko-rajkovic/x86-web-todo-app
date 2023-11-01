@@ -122,6 +122,7 @@ main:
     cmp rax, 0
     jl error
 
+next_request:
     write STDOUT, accept_trace_msg, accept_trace_msg_len
     accept [sockfd], cliaddr.sin_family, cliaddr_len
     cmp rax, 0
@@ -130,9 +131,11 @@ main:
     mov qword [connfd], rax
 
     write [connfd], response, response_len
+    close [connfd]
+
+    jmp next_request
 
     write STDOUT, ok_msg, ok_msg_len
-    close [connfd]
     close [sockfd]
     exit EXIT_SUCCESS
 
