@@ -129,7 +129,7 @@ main:
 
     mov qword [connfd], rax
 
-    write [connfd], hello, hello_len
+    write [connfd], response, response_len
 
     write STDOUT, ok_msg, ok_msg_len
     close [connfd]
@@ -171,6 +171,13 @@ cliaddr_len dd sizeof_servaddr
 
 hello db 'Hello from the flat assembler', 10
 hello_len = $ - hello
+
+response    db 'HTTP/1.1 200 OK', 13, 10 ; instead of newline, we print both cr and nl: 13 = \r 10 = \n
+            db 'Content-Type: text/html; charset=utf-8', 13, 10
+            db 'Connection: close', 13, 10
+            db 13, 10
+            db '<h1>Hello from the flat assembler</h1>', 13, 10
+response_len = $ - response
 
 start db 'INFO: Starting Web Server', 10
 start_len = $ - start
