@@ -5,10 +5,14 @@ include "linux.inc"
 MAX_CONN equ 5
 
 segment readable executable
+
+include "utils.inc"
+
 entry main
 main:
-    write STDOUT, start, start_len
-    write STDOUT, socket_trace_msg, socket_trace_msg_len
+    funcall2 write_cstr, STDOUT, start
+
+    funcall2 write_cstr, STDOUT, socket_trace_msg
 
     ; Opening socket
     socket AF_INET, SOCK_STREAM, 0
@@ -20,7 +24,7 @@ main:
     ; Implementing the same way as TCP server in C, just check here:
     ; https://www.geeksforgeeks.org/tcp-server-client-implementation-in-c/
 
-    write STDOUT, bind_trace_msg, bind_trace_msg_len
+    funcall2 write_cstr, STDOUT, bind_trace_msg
     ; Preparing structure
     mov word [servaddr.sin_family], AF_INET
     mov dword [servaddr.sin_port], 14619 ; port 6969 in reverse order (check htons.py)
@@ -35,13 +39,13 @@ main:
     cmp rax, 0
     jl error
 
-    write STDOUT, listen_trace_msg, listen_trace_msg_len
+    funcall2 write_cstr, STDOUT, listen_trace_msg
     listen [sockfd], MAX_CONN
     cmp rax, 0
     jl error
 
 next_request:
-    write STDOUT, accept_trace_msg, accept_trace_msg_len
+    funcall2 write_cstr, STDOUT, accept_trace_msg
     accept [sockfd], cliaddr.sin_family, cliaddr_len
     cmp rax, 0
     jl error
@@ -53,12 +57,12 @@ next_request:
 
     jmp next_request
 
-    write STDOUT, ok_msg, ok_msg_len
+    funcall2 write_cstr, STDOUT, ok_msg
     close [sockfd]
     exit EXIT_SUCCESS
 
 error:
-    write STDERR, error_msg, error_msg_len
+    funcall2 write_cstr, STDERR, error_msg
     close [connfd]
     close [sockfd]
     exit EXIT_FAILURE
@@ -74,7 +78,6 @@ cliaddr servaddr_in
 cliaddr_len dd sizeof_servaddr
 
 hello db "Hello from the flat assembler", 10
-hello_len = $ - hello
 
 response    db "HTTP/1.1 200 OK", 13, 10 ; instead of newline, we print both cr and nl: 13 = \r 10 = \n
             db "Content-Type: text/html; charset=utf-8", 13, 10
@@ -84,16 +87,10 @@ response    db "HTTP/1.1 200 OK", 13, 10 ; instead of newline, we print both cr 
 response_len = $ - response
 
 start            db "INFO: Starting Web Server!", 10, 0
-start_len = $ - start
 ok_msg           db "INFO: OK!", 10, 0
-ok_msg_len = $ - ok_msg
 socket_trace_msg db "INFO: Creating a socket...", 10, 0
-socket_trace_msg_len = $ - socket_trace_msg
 bind_trace_msg   db "INFO: Binding the socket...", 10, 0
-bind_trace_msg_len = $ - bind_trace_msg
 listen_trace_msg db "INFO: Listening to the socket...", 10, 0
-listen_trace_msg_len = $ - listen_trace_msg
 accept_trace_msg db "INFO: Waiting for client connections...", 10, 0
-accept_trace_msg_len = $ - accept_trace_msg
 error_msg        db "FATAL ERROR!", 10, 0
-error_msg_len = $ - error_msg
+

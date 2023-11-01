@@ -17,6 +17,14 @@ STDERR equ 2
 EXIT_SUCCESS equ 0
 EXIT_FAILURE equ 1
 
+macro funcall2 func, a, b
+{
+    mov rdi, a
+    mov rsi, b
+    call func
+}
+
+
 macro syscall1 number, a
 {
     mov rax, number
