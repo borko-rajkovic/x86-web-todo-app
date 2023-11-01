@@ -1,4 +1,6 @@
 ;; Linux related constants and macros
+
+SYS_read equ 0
 SYS_write equ 1
 SYS_exit equ 60
 SYS_socket equ 41
@@ -80,6 +82,12 @@ macro syscall5 number, a, b, c, d, e
 macro write fd, buf, count
 {
     syscall3 SYS_write, fd, buf, count
+}
+
+;; ssize_t read(int fd, void *buf, size_t count);
+macro read fd, buf, count
+{
+    syscall3 SYS_read, fd, buf, count
 }
 
 ;; int close(int fd);

@@ -3,6 +3,7 @@ format ELF64 executable
 include "linux.inc"
 
 MAX_CONN equ 5
+REQUEST_CAP equ 128*1024
 
 segment readable executable
 
@@ -52,6 +53,17 @@ main:
 
     mov qword [connfd], rax
 
+    ; int3 - uncomment for software interrupt
+
+    read [connfd], request, REQUEST_CAP
+    cmp rax, 0
+    jl .fatal_error
+    mov [request_len], rax
+
+    mov [request_cur], request
+
+    write STDOUT, [request_cur], [request_len]
+
     funcall2 write_cstr, [connfd], index_page_response
     close [connfd]
 
@@ -91,3 +103,7 @@ listen_trace_msg db "INFO: Listening to the socket...", 10, 0
 accept_trace_msg db "INFO: Waiting for client connections...", 10, 0
 error_msg        db "FATAL ERROR!", 10, 0
 
+
+request_len rq 1
+request_cur rq 1
+request     rb REQUEST_CAP
