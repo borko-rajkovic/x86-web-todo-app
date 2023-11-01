@@ -17,7 +17,7 @@ main:
     ; Opening socket
     socket AF_INET, SOCK_STREAM, 0
     cmp rax, 0
-    jl error
+    jl .fatal_error
     mov qword [sockfd], rax
 
     ; Binding socket
@@ -37,31 +37,31 @@ main:
     ;                           so we can say it's the pointer to structure itself
     bind [sockfd], servaddr.sin_family, sizeof_servaddr
     cmp rax, 0
-    jl error
+    jl .fatal_error
 
     funcall2 write_cstr, STDOUT, listen_trace_msg
     listen [sockfd], MAX_CONN
     cmp rax, 0
-    jl error
+    jl .fatal_error
 
-next_request:
+.next_request:
     funcall2 write_cstr, STDOUT, accept_trace_msg
     accept [sockfd], cliaddr.sin_family, cliaddr_len
     cmp rax, 0
-    jl error
+    jl .fatal_error
 
     mov qword [connfd], rax
 
     write [connfd], response, response_len
     close [connfd]
 
-    jmp next_request
+    jmp .next_request
 
     funcall2 write_cstr, STDOUT, ok_msg
     close [sockfd]
     exit EXIT_SUCCESS
 
-error:
+.fatal_error:
     funcall2 write_cstr, STDERR, error_msg
     close [connfd]
     close [sockfd]
