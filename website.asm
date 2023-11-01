@@ -77,8 +77,6 @@ sizeof_servaddr = $ - servaddr.sin_family
 cliaddr servaddr_in
 cliaddr_len dd sizeof_servaddr
 
-hello db "Hello from the flat assembler", 10
-
 response    db "HTTP/1.1 200 OK", 13, 10 ; instead of newline, we print both cr and nl: 13 = \r 10 = \n
             db "Content-Type: text/html; charset=utf-8", 13, 10
             db "Connection: close", 13, 10
