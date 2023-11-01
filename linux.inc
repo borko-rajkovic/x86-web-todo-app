@@ -83,3 +83,22 @@ macro exit code
     syscall1 SYS_exit, code
 }
 
+;; db - 1 byte -  8 bits
+;; dw - 2 byte - 16 bits
+;; dd - 4 byte - 32 bits
+;; dq - 8 byte - 64 bits
+
+; struct sockaddr_in {
+; 	sa_family_t sin_family;     // 16 bits
+; 	in_port_t sin_port;         // 16 bits
+; 	struct in_addr sin_addr;    // 32 bits
+; 	uint8_t sin_zero[8];        // 64 bits
+; };
+struc servaddr_in
+{
+    .sin_family dw 0
+    .sin_port   dw 0
+    .sin_addr   dd 0
+    .sin_zero   dq 0
+}
+

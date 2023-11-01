@@ -63,54 +63,37 @@ error:
     close [sockfd]
     exit EXIT_FAILURE
 
-;; db - 1 byte -  8 bits
-;; dw - 2 byte - 16 bits
-;; dd - 4 byte - 32 bits
-;; dq - 8 byte - 64 bits
-segment readable writeable
 
-struc servaddr_in
-{
-    .sin_family dw 0
-    .sin_port   dw 0
-    .sin_addr   dd 0
-    .sin_zero   dq 0
-}
+segment readable writeable
 
 sockfd dq -1
 connfd dq -1
-; struct sockaddr_in {
-; 	sa_family_t sin_family;     // 16 bits
-; 	in_port_t sin_port;         // 16 bits
-; 	struct in_addr sin_addr;    // 32 bits
-; 	uint8_t sin_zero[8];        // 64 bits
-; };
 servaddr servaddr_in
 sizeof_servaddr = $ - servaddr.sin_family
 cliaddr servaddr_in
 cliaddr_len dd sizeof_servaddr
 
-hello db 'Hello from the flat assembler', 10
+hello db "Hello from the flat assembler", 10
 hello_len = $ - hello
 
-response    db 'HTTP/1.1 200 OK', 13, 10 ; instead of newline, we print both cr and nl: 13 = \r 10 = \n
-            db 'Content-Type: text/html; charset=utf-8', 13, 10
-            db 'Connection: close', 13, 10
+response    db "HTTP/1.1 200 OK", 13, 10 ; instead of newline, we print both cr and nl: 13 = \r 10 = \n
+            db "Content-Type: text/html; charset=utf-8", 13, 10
+            db "Connection: close", 13, 10
             db 13, 10
-            db '<h1>Hello from the flat assembler</h1>', 13, 10
+            db "<h1>Hello from the flat assembler</h1>", 13, 10
 response_len = $ - response
 
-start db 'INFO: Starting Web Server', 10
+start            db "INFO: Starting Web Server!", 10, 0
 start_len = $ - start
-ok_msg db 'INFO: OK!', 10
+ok_msg           db "INFO: OK!", 10, 0
 ok_msg_len = $ - ok_msg
-socket_trace_msg db 'INFO: Creating a socket...', 10
+socket_trace_msg db "INFO: Creating a socket...", 10, 0
 socket_trace_msg_len = $ - socket_trace_msg
-bind_trace_msg db 'INFO: Binding the socket...', 10
+bind_trace_msg   db "INFO: Binding the socket...", 10, 0
 bind_trace_msg_len = $ - bind_trace_msg
-listen_trace_msg db 'INFO: Listening to the socket...', 10
+listen_trace_msg db "INFO: Listening to the socket...", 10, 0
 listen_trace_msg_len = $ - listen_trace_msg
-accept_trace_msg db 'INFO: Waiting for client connections...', 10
+accept_trace_msg db "INFO: Waiting for client connections...", 10, 0
 accept_trace_msg_len = $ - accept_trace_msg
-error_msg db 'ERROR!', 10
+error_msg        db "FATAL ERROR!", 10, 0
 error_msg_len = $ - error_msg
