@@ -64,9 +64,26 @@ main:
 
     write STDOUT, [request_cur], [request_len]
 
+    funcall4 starts_with, [request_cur], [request_len], get, get_len
+    cmp rax, 0
+    jg .handle_get_method
+
+    funcall4 starts_with, [request_cur], [request_len], post, post_len
+    cmp rax, 0
+    jg .handle_post_method
+
+    jmp .serve_error_405
+
+.handle_get_method:
+.handle_post_method:
     funcall2 write_cstr, [connfd], index_page_response
     close [connfd]
 
+    jmp .next_request
+
+.serve_error_405:
+    funcall2 write_cstr, [connfd], error_405
+    close [connfd]
     jmp .next_request
 
     funcall2 write_cstr, STDOUT, ok_msg
@@ -89,11 +106,22 @@ sizeof_servaddr = $ - servaddr.sin_family
 cliaddr servaddr_in
 cliaddr_len dd sizeof_servaddr
 
+error_405            db "HTTP/1.1 405 Method Not Allowed", 13, 10
+                     db "Content-Type: text/html; charset=utf-8", 13, 10
+                     db "Connection: close", 13, 10
+                     db 13, 10
+                     db "<h1>Method not Allowed</h1>", 10
+                     db "<a href='/'>Back to Home</a>", 10
+                     db 0
 index_page_response  db "HTTP/1.1 200 OK", 13, 10
                      db "Content-Type: text/html; charset=utf-8", 13, 10
                      db "Connection: close", 13, 10
                      db 13, 10
                      db 0
+get db "GET "
+get_len = $ - get
+post db "POST "
+post_len = $ - post
 
 start            db "INFO: Starting Web Server!", 10, 0
 ok_msg           db "INFO: OK!", 10, 0
