@@ -24,6 +24,22 @@ macro funcall2 func, a, b
     call func
 }
 
+macro funcall3 func, a, b, c
+{
+    mov rdi, a
+    mov rsi, b
+    mov rdx, c
+    call func
+}
+
+macro funcall4 func, a, b, c, d
+{
+    mov rdi, a
+    mov rsi, b
+    mov rdx, c
+    mov r10, d
+    call func
+}
 
 macro syscall1 number, a
 {
@@ -46,6 +62,17 @@ macro syscall3 number, a, b, c
     mov rdi, a
     mov rsi, b
     mov rdx, c
+    syscall
+}
+
+macro syscall5 number, a, b, c, d, e
+{
+    mov rax, number
+    mov rdi, a
+    mov rsi, b
+    mov rdx, c
+    mov r10, d
+    mov r8,  e
     syscall
 }
 
