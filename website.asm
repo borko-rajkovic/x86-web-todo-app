@@ -87,7 +87,6 @@ main:
     sub [request_len], get_len
 
     funcall4 starts_with, [request_cur], [request_len], index_route, index_route_len
-    call starts_with
     cmp rax, 0
     jg .serve_index_page
 
@@ -98,12 +97,20 @@ main:
     sub [request_len], post_len
 
     funcall4 starts_with, [request_cur], [request_len], index_route, index_route_len
-    call starts_with
     cmp rax, 0
-    jg .serve_index_page
+    jg .process_add_or_delete_todo_post
+
+    funcall4 starts_with, [request_cur], [request_len], shutdown_route, shutdown_route_len
+    cmp rax, 0
+    jg .process_shutdown
 
     jmp .serve_error_404
 
+.process_shutdown:
+    funcall2 write_cstr, [connfd], shutdown_response
+    jmp .shutdown
+
+.process_add_or_delete_todo_post:
 .serve_index_page:
     funcall2 write_cstr, [connfd], index_page_response
     close [connfd]
@@ -120,7 +127,9 @@ main:
     close [connfd]
     jmp .next_request
 
+.shutdown:
     funcall2 write_cstr, STDOUT, ok_msg
+    close [connfd]
     close [sockfd]
     exit EXIT_SUCCESS
 
@@ -160,6 +169,14 @@ index_page_response  db "HTTP/1.1 200 OK", 13, 10
                      db "Connection: close", 13, 10
                      db 13, 10
                      db 0
+shutdown_response    db "HTTP/1.1 200 OK", 13, 10
+                     db "Content-Type: text/html; charset=utf-8", 13, 10
+                     db "Connection: close", 13, 10
+                     db 13, 10
+                     db "<h1>Shutting down the server...</h1>", 10
+                     db "Please close this tab"
+                     db 0
+
 get db "GET "
 get_len = $ - get
 post db "POST "
@@ -167,6 +184,9 @@ post_len = $ - post
 
 index_route db "/ "
 index_route_len = $ - index_route
+
+shutdown_route db "/shutdown "
+shutdown_route_len = $ - shutdown_route
 
 start            db "INFO: Starting Web Server!", 10, 0
 ok_msg           db "INFO: OK!", 10, 0
