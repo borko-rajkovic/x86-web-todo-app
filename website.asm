@@ -119,6 +119,16 @@ main:
     funcall2 write_cstr, STDOUT, executing_command_msg
     write STDOUT, [request_cur], [request_len]
 
+    funcall4 starts_with, [request_cur], [request_len], todo_form_data_prefix, todo_form_data_prefix_len
+    cmp rax, 0
+    jg .add_new_todo_and_serve_index_page
+
+    funcall4 starts_with, [request_cur], [request_len], delete_form_data_prefix, delete_form_data_prefix_len
+    cmp rax, 0
+    jg .delete_todo_and_serve_index_page
+
+    jmp .serve_error_400
+
 .serve_index_page:
     funcall2 write_cstr, [connfd], index_page_response
     close [connfd]
@@ -138,6 +148,20 @@ main:
     funcall2 write_cstr, [connfd], error_405
     close [connfd]
     jmp .next_request
+
+.add_new_todo_and_serve_index_page:
+    add [request_cur], todo_form_data_prefix_len
+    sub [request_len], todo_form_data_prefix_len
+
+    ; here we should add new todo
+    jmp .serve_index_page
+
+.delete_todo_and_serve_index_page:
+    add [request_cur], delete_form_data_prefix_len
+    sub [request_len], delete_form_data_prefix_len
+
+    ; here we should delete a todo
+    jmp .serve_index_page
 
 .shutdown:
     funcall2 write_cstr, STDOUT, ok_msg
@@ -225,6 +249,11 @@ shutdown_response    db "HTTP/1.1 200 OK", 13, 10
                      db "<h1>Shutting down the server...</h1>", 10
                      db "Please close this tab"
                      db 0
+
+todo_form_data_prefix db "todo="
+todo_form_data_prefix_len = $ - todo_form_data_prefix
+delete_form_data_prefix db "delete="
+delete_form_data_prefix_len = $ - delete_form_data_prefix
 
 get db "GET "
 get_len = $ - get
