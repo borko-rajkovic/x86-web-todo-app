@@ -160,7 +160,8 @@ main:
     add [request_cur], delete_form_data_prefix_len
     sub [request_len], delete_form_data_prefix_len
 
-    ; here we should delete a todo
+    funcall2 parse_uint, [request_cur], [request_len]
+    ; here we should delete a todo - rdi is parsed id
     jmp .serve_index_page
 
 .shutdown:
