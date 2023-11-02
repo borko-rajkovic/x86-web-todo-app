@@ -21,6 +21,14 @@ main:
     jl .fatal_error
     mov qword [sockfd], rax
 
+    setsockopt [sockfd], SOL_SOCKET, SO_REUSEADDR, enable, 4
+    cmp rax, 0
+    jl .fatal_error
+
+    setsockopt [sockfd], SOL_SOCKET, SO_REUSEPORT, enable, 4
+    cmp rax, 0
+    jl .fatal_error
+
     ; Binding socket
     ; Implementing the same way as TCP server in C, just check here:
     ; https://www.geeksforgeeks.org/tcp-server-client-implementation-in-c/
@@ -99,6 +107,7 @@ main:
 
 segment readable writeable
 
+enable dd 1
 sockfd dq -1
 connfd dq -1
 servaddr servaddr_in
