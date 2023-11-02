@@ -111,10 +111,22 @@ main:
     jmp .shutdown
 
 .process_add_or_delete_todo_post:
+    call drop_http_header
+    cmp rax, 0
+    je .serve_error_400
+
+    funcall2 write_cstr, STDOUT, new_line
+    funcall2 write_cstr, STDOUT, executing_command_msg
+    write STDOUT, [request_cur], [request_len]
+
 .serve_index_page:
     funcall2 write_cstr, [connfd], index_page_response
     close [connfd]
+    jmp .next_request
 
+.serve_error_400:
+    funcall2 write_cstr, [connfd], error_400
+    close [connfd]
     jmp .next_request
 
 .serve_error_404:
@@ -139,6 +151,34 @@ main:
     close [sockfd]
     exit EXIT_FAILURE
 
+drop_http_header:
+.next_line:
+    funcall4 starts_with, [request_cur], [request_len], crlf, 2
+    cmp rax, 0
+    jg .reached_end
+
+    funcall3 find_char, [request_cur], [request_len], 10
+    cmp rax, 0
+    je .invalid_header
+
+    mov rsi, rax
+    sub rsi, [request_cur]
+    inc rsi
+    add [request_cur], rsi
+    sub [request_len], rsi
+
+    jmp .next_line
+
+.reached_end:
+    add [request_cur], 2
+    sub [request_len], 2
+    mov rax, 1
+    ret
+
+.invalid_header:
+    xor rax, rax
+    ret
+
 
 segment readable writeable
 
@@ -150,6 +190,15 @@ sizeof_servaddr = $ - servaddr.sin_family
 cliaddr servaddr_in
 cliaddr_len dd sizeof_servaddr
 
+crlf db 13, 10
+
+error_400            db "HTTP/1.1 400 Bad Request", 13, 10
+                     db "Content-Type: text/html; charset=utf-8", 13, 10
+                     db "Connection: close", 13, 10
+                     db 13, 10
+                     db "<h1>Bad Request</h1>", 10
+                     db "<a href='/'>Back to Home</a>", 10
+                     db 0
 error_404            db "HTTP/1.1 404 Not found", 13, 10
                      db "Content-Type: text/html; charset=utf-8", 13, 10
                      db "Connection: close", 13, 10
@@ -188,14 +237,15 @@ index_route_len = $ - index_route
 shutdown_route db "/shutdown "
 shutdown_route_len = $ - shutdown_route
 
-start            db "INFO: Starting Web Server!", 10, 0
-ok_msg           db "INFO: OK!", 10, 0
-socket_trace_msg db "INFO: Creating a socket...", 10, 0
-bind_trace_msg   db "INFO: Binding the socket...", 10, 0
-listen_trace_msg db "INFO: Listening to the socket...", 10, 0
-accept_trace_msg db "INFO: Waiting for client connections...", 10, 0
-error_msg        db "FATAL ERROR!", 10, 0
-
+new_line                db 10, 0
+start                   db "INFO: Starting Web Server!", 10, 0
+ok_msg                  db "INFO: OK!", 10, 0
+socket_trace_msg        db "INFO: Creating a socket...", 10, 0
+bind_trace_msg          db "INFO: Binding the socket...", 10, 0
+listen_trace_msg        db "INFO: Listening to the socket...", 10, 0
+accept_trace_msg        db "INFO: Waiting for client connections...", 10, 0
+executing_command_msg   db "INFO: Executing command: ", 0
+error_msg               db "FATAL ERROR!", 10, 0
 
 request_len rq 1
 request_cur rq 1
