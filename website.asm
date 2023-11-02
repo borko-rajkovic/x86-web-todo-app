@@ -255,6 +255,9 @@ index_page_footer    db "  <li>", 10
                      db "    </form>", 10
                      db "  </li>", 10
                      db "</ul>", 10
+                     db "<form method='post' action='/shutdown'>", 10
+                     db "    <input type='submit' value='shutdown'>", 10
+                     db "</form>", 10
                      db 0
 shutdown_response    db "HTTP/1.1 200 OK", 13, 10
                      db "Content-Type: text/html; charset=utf-8", 13, 10
