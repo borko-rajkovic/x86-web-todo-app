@@ -120,6 +120,7 @@ main:
     funcall2 write_cstr, STDOUT, new_line
     funcall2 write_cstr, STDOUT, executing_command_msg
     write STDOUT, [request_cur], [request_len]
+    funcall2 write_cstr, STDOUT, new_line
 
     funcall4 starts_with, [request_cur], [request_len], todo_form_data_prefix, todo_form_data_prefix_len
     cmp rax, 0
@@ -220,6 +221,9 @@ render_todos_as_html:
     jge .done
 
     funcall2 write_cstr, [connfd], todo_header
+    funcall2 write_cstr, [connfd], delete_button_prefix
+    funcall2 write_uint, [connfd], [rsp+8]
+    funcall2 write_cstr, [connfd], delete_button_suffix
 
     mov rax, SYS_write
     mov rdi, [connfd]
@@ -233,6 +237,7 @@ render_todos_as_html:
     mov rax, [rsp]
     add rax, TODO_SIZE
     mov [rsp], rax
+    inc qword [rsp+8]
     jmp .next_todo
 .done:
     pop rax
@@ -294,6 +299,11 @@ index_page_footer    db "  <li>", 10
 todo_header          db "  <li>"
                      db 0
 todo_footer          db "</li>", 10
+                     db 0
+delete_button_prefix db "<form style='display: inline' method='post' action='/'>"
+                     db "<button style='width: 25px' type='submit' name='delete' value='"
+                     db 0
+delete_button_suffix db "'>x</button></form> "
                      db 0
 shutdown_response    db "HTTP/1.1 200 OK", 13, 10
                      db "Content-Type: text/html; charset=utf-8", 13, 10
