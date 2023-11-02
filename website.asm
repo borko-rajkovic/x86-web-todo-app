@@ -83,10 +83,36 @@ main:
     jmp .serve_error_405
 
 .handle_get_method:
+    add [request_cur], get_len
+    sub [request_len], get_len
+
+    funcall4 starts_with, [request_cur], [request_len], index_route, index_route_len
+    call starts_with
+    cmp rax, 0
+    jg .serve_index_page
+
+    jmp .serve_error_404
+
 .handle_post_method:
+    add [request_cur], post_len
+    sub [request_len], post_len
+
+    funcall4 starts_with, [request_cur], [request_len], index_route, index_route_len
+    call starts_with
+    cmp rax, 0
+    jg .serve_index_page
+
+    jmp .serve_error_404
+
+.serve_index_page:
     funcall2 write_cstr, [connfd], index_page_response
     close [connfd]
 
+    jmp .next_request
+
+.serve_error_404:
+    funcall2 write_cstr, [connfd], error_404
+    close [connfd]
     jmp .next_request
 
 .serve_error_405:
@@ -115,6 +141,13 @@ sizeof_servaddr = $ - servaddr.sin_family
 cliaddr servaddr_in
 cliaddr_len dd sizeof_servaddr
 
+error_404            db "HTTP/1.1 404 Not found", 13, 10
+                     db "Content-Type: text/html; charset=utf-8", 13, 10
+                     db "Connection: close", 13, 10
+                     db 13, 10
+                     db "<h1>Page not found</h1>", 10
+                     db "<a href='/'>Back to Home</a>", 10
+                     db 0
 error_405            db "HTTP/1.1 405 Method Not Allowed", 13, 10
                      db "Content-Type: text/html; charset=utf-8", 13, 10
                      db "Connection: close", 13, 10
@@ -131,6 +164,9 @@ get db "GET "
 get_len = $ - get
 post db "POST "
 post_len = $ - post
+
+index_route db "/ "
+index_route_len = $ - index_route
 
 start            db "INFO: Starting Web Server!", 10, 0
 ok_msg           db "INFO: OK!", 10, 0
