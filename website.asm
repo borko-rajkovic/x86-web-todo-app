@@ -131,6 +131,8 @@ main:
 
 .serve_index_page:
     funcall2 write_cstr, [connfd], index_page_response
+    funcall2 write_cstr, [connfd], index_page_header
+    funcall2 write_cstr, [connfd], index_page_footer
     close [connfd]
     jmp .next_request
 
@@ -242,6 +244,17 @@ index_page_response  db "HTTP/1.1 200 OK", 13, 10
                      db "Content-Type: text/html; charset=utf-8", 13, 10
                      db "Connection: close", 13, 10
                      db 13, 10
+                     db 0
+index_page_header    db "<h1>To-Do</h1>", 10
+                     db "<ul>", 10
+                     db 0
+index_page_footer    db "  <li>", 10
+                     db "    <form style='display: inline' method='post' action='/' enctype='text/plain'>", 10
+                     db "        <input style='width: 25px' type='submit' value='+'>", 10
+                     db "        <input type='text' name='todo' autofocus>", 10
+                     db "    </form>", 10
+                     db "  </li>", 10
+                     db "</ul>", 10
                      db 0
 shutdown_response    db "HTTP/1.1 200 OK", 13, 10
                      db "Content-Type: text/html; charset=utf-8", 13, 10
