@@ -92,6 +92,27 @@ parse_uint:
 .done:
     ret
 
+;; Copy a chunk of memory
+;;   rdi - void *dst
+;;   rsi - void *src
+;;   rdx - size_t n
+memcpy:
+.next_byte:
+   cmp rdx, 0
+   jle .done
+
+   mov al, byte [rsi]
+   mov byte [rdi], al
+
+   inc rdi
+   inc rsi
+   dec rdx
+
+   jmp .next_byte
+.done:
+   ret
+
+
 ;; Find a character with a sized string
 ;;   rdi - void *buf
 ;;   rsi - size_t n
