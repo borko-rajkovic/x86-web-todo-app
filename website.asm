@@ -167,7 +167,8 @@ main:
     sub [request_len], delete_form_data_prefix_len
 
     funcall2 parse_uint, [request_cur], [request_len]
-    ; here we should delete a todo - rdi is parsed id
+    mov rdi, rax
+    call delete_todo
     jmp .serve_index_page
 
 .shutdown:
@@ -209,6 +210,76 @@ drop_http_header:
 .invalid_header:
     xor rax, rax
     ret
+
+;; rdi - size_t index
+delete_todo:
+   mov rax, TODO_SIZE
+   mul rdi
+   cmp rax, [todo_end_offset]
+   jge .overflow
+
+   ;; ****** ****** ******
+   ;; ^      ^             ^
+   ;; dst    src           end
+   ;;
+   ;; count = end - src
+
+   mov rdi, todo_begin
+   add rdi, rax                 ; set rdi (dst) to pointer before element to be deleted
+   mov rsi, todo_begin
+   add rsi, rax
+   add rsi, TODO_SIZE           ; set rsi (src) to pointer after element to be deleted
+   mov rdx, todo_begin
+   add rdx, [todo_end_offset]
+   sub rdx, rsi                 ; rdx (count) is the size of the remaining part of the list after
+                                ;   the element that has to be deleted
+   call memcpy                  ; when called it will have:
+                                ; - rsi (source) set to a pointer right after element to be deleted
+                                ; - rdi (destination) set to a pointer right before element to be deleted
+                                ; - rdx (size) set to a size of the new element
+                                ;
+                                ; Effectively, memcpy will shift left all bytes after the element that has to be deleted
+                                ; to left, basically eliminating the space that element occupied
+                                ;
+                                ; Important thing here is to notice that copy is in place, meaning that it does not use separate memory
+                                ; Hence, it's crucial to copy from left to right.
+                                ; If copied from right to left, data would be invalid.
+                                ;
+                                ; Example:
+                                ;
+                                ; Let's say we would like to delete bbbb from the following memory:
+                                ;
+                                ; aaaabbbb ccccdddd
+                                ;
+                                ; if we do it by two pointers from left side to right, it would look like this in steps:
+                                ;
+                                ; 0. aaaabbbb ccccdddd - Step 0; initial state
+                                ; 1. aaaacbbb ccccdddd - Step 1; copied from index 08 (value c) to index 04
+                                ; 2. aaaaccbb ccccdddd - Step 2; copied from index 09 (value c) to index 05
+                                ; 3. aaaacccb ccccdddd - Step 3; copied from index 10 (value c) to index 06
+                                ; 4. aaaacccc ccccdddd - Step 4; copied from index 11 (value c) to index 07
+                                ; 5. aaaacccc dcccdddd - Step 5; copied from index 12 (value d) to index 08
+                                ; 6. aaaacccc ddccdddd - Step 6; copied from index 13 (value d) to index 09
+                                ; 7. aaaacccc dddcdddd - Step 7; copied from index 14 (value d) to index 10
+                                ; 8. aaaacccc dddddddd - Step 8; copied from index 15 (value d) to index 11
+                                ;
+                                ; On the other hand, if we copied from right to left, it would look like this:
+                                ;
+                                ; 0. aaaabbbb ccccdddd - Step 0; initial state
+                                ; 1. aaaabbbb cccddddd - Step 1; copied from index 15 (value d) to index 11
+                                ; 2. aaaabbbb ccdddddd - Step 2; copied from index 14 (value d) to index 10
+                                ; 3. aaaabbbb cddddddd - Step 3; copied from index 13 (value d) to index 09
+                                ; 4. aaaabbbb dddddddd - Step 4; copied from index 12 (value d) to index 08
+                                ; 5. aaaabbbd dddddddd - Step 5; copied from index 11 (value d) to index 07
+                                ; 6. aaaabbdd dddddddd - Step 6; copied from index 10 (value d) to index 06
+                                ; 7. aaaabddd dddddddd - Step 7; copied from index 09 (value d) to index 05
+                                ; 8. aaaadddd dddddddd - Step 8; copied from index 08 (value d) to index 04
+                                ;
+                                ; As you can see, right to left will override data incorrectly
+
+   sub [todo_end_offset], TODO_SIZE ;decrease end offset by size of single TODO
+.overflow:
+   ret
 
 ;; TODO: sanitize the input to prevent XSS
 ;; rdi - void *buf (title of Todo)
