@@ -159,7 +159,7 @@ main:
     add [request_cur], todo_form_data_prefix_len
     sub [request_len], todo_form_data_prefix_len
 
-    ; here we should add new todo
+    funcall2 add_todo, [request_cur], [request_len]
     jmp .serve_index_page
 
 .delete_todo_and_serve_index_page:
@@ -209,6 +209,50 @@ drop_http_header:
 .invalid_header:
     xor rax, rax
     ret
+
+;; TODO: sanitize the input to prevent XSS
+;; rdi - void *buf (title of Todo)
+;; rsi - size_t count
+add_todo:
+   ;; Check for TODO capacity overflow
+   cmp qword [todo_end_offset], TODO_SIZE*TODO_CAP
+   jge .capacity_overflow
+
+   ;; Truncate strings longer than 255
+   mov rax, 0xFF
+   cmp rsi, rax
+   cmovg rsi, rax
+
+   push rdi ;; void *buf [rsp+8]
+   push rsi ;; size_t count [rsp]
+
+   ;; +*******
+   ;;  ^
+   ;;  rdi
+   mov rdi, todo_begin          ; put todo_begin in rdi
+   add rdi, [todo_end_offset]   ; set rdi to end of already written todos
+   mov rdx, [rsp]               ; set size of title to rdx
+   mov byte [rdi], dl           ; set LSB of rdi to one from rds (size of the new element)
+                                ;    to make first byte of TODO memory the correct size of the element
+   inc rdi                      ; skip first byte, as it contains data about Todo's length;
+                                ;    copy the content after the length information
+   mov rsi, [rsp+8]             ; set pointer to title of Todo
+   call memcpy                  ; when called it will have:
+                                ; - rsi (source) set to a pointer of new Todo
+                                ; - rdi (destination) set to a pointer in a todo list
+                                ;   that points to place for new element
+                                ; - rdx (size) set to a size of the new element
+                                ;   (limited to TODO_SIZE)
+
+   add [todo_end_offset], TODO_SIZE ; increase end offset by size of a Todo (TODO_SIZE)
+
+   pop rsi
+   pop rdi
+   mov rax, 0
+   ret
+.capacity_overflow:
+   mov rax, 1
+   ret
 
 render_todos_as_html:
     push 0
