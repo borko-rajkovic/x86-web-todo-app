@@ -13,6 +13,8 @@ include "utils.inc"
 
 entry main
 main:
+    call load_todos
+
     funcall2 write_cstr, STDOUT, start
 
     funcall2 write_cstr, STDOUT, socket_trace_msg
@@ -160,6 +162,7 @@ main:
     sub [request_len], todo_form_data_prefix_len
 
     funcall2 add_todo, [request_cur], [request_len]
+    call save_todos
     jmp .serve_index_page
 
 .delete_todo_and_serve_index_page:
@@ -169,6 +172,7 @@ main:
     funcall2 parse_uint, [request_cur], [request_len]
     mov rdi, rax
     call delete_todo
+    call save_todos
     jmp .serve_index_page
 
 .shutdown:
@@ -279,6 +283,14 @@ delete_todo:
 
    sub [todo_end_offset], TODO_SIZE ;decrease end offset by size of single TODO
 .overflow:
+   ret
+
+load_todos:
+   ; to be implemented
+   ret
+
+save_todos:
+    ; to be implemented
    ret
 
 ;; TODO: sanitize the input to prevent XSS
