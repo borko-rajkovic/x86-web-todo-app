@@ -316,6 +316,13 @@ load_todos:
     div rcx
     cmp rdx, 0
     jne .error
+
+    ;; Truncate the size to supported TODO_CAP
+    mov rcx, TODO_CAP*TODO_SIZE
+    mov rax, [rsp]
+    cmp rax, rcx
+    cmovg rax, rcx
+    mov [rsp], rax
 .error:
     ; close open file and reset stack
     ; (this will be executed also in case method is successful)
