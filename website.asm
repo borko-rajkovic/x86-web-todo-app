@@ -340,7 +340,10 @@ save_todos:
     open todo_db_file_path, O_CREAT or O_WRONLY or O_TRUNC, 420
     cmp rax, 0
     jl .fail
-    ; do the actual save here
+    push rax
+    write qword [rsp], todo_begin, [todo_end_offset]
+    close qword [rsp]
+    pop rax
 .fail:
     ret
 
