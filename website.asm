@@ -217,27 +217,27 @@ drop_http_header:
 
 ;; rdi - size_t index
 delete_todo:
-   mov rax, TODO_SIZE
-   mul rdi
-   cmp rax, [todo_end_offset]
-   jge .overflow
+    mov rax, TODO_SIZE
+    mul rdi
+    cmp rax, [todo_end_offset]
+    jge .overflow
 
-   ;; ****** ****** ******
-   ;; ^      ^             ^
-   ;; dst    src           end
-   ;;
-   ;; count = end - src
+    ;; ****** ****** ******
+    ;; ^      ^             ^
+    ;; dst    src           end
+    ;;
+    ;; count = end - src
 
-   mov rdi, todo_begin
-   add rdi, rax                 ; set rdi (dst) to pointer before element to be deleted
-   mov rsi, todo_begin
-   add rsi, rax
-   add rsi, TODO_SIZE           ; set rsi (src) to pointer after element to be deleted
-   mov rdx, todo_begin
-   add rdx, [todo_end_offset]
-   sub rdx, rsi                 ; rdx (count) is the size of the remaining part of the list after
+    mov rdi, todo_begin
+    add rdi, rax                 ; set rdi (dst) to pointer before element to be deleted
+    mov rsi, todo_begin
+    add rsi, rax
+    add rsi, TODO_SIZE           ; set rsi (src) to pointer after element to be deleted
+    mov rdx, todo_begin
+    add rdx, [todo_end_offset]
+    sub rdx, rsi                ; rdx (count) is the size of the remaining part of the list after
                                 ;   the element that has to be deleted
-   call memcpy                  ; when called it will have:
+    call memcpy                 ; when called it will have:
                                 ; - rsi (source) set to a pointer right after element to be deleted
                                 ; - rdi (destination) set to a pointer right before element to be deleted
                                 ; - rdx (size) set to a size of the new element
@@ -281,81 +281,81 @@ delete_todo:
                                 ;
                                 ; As you can see, right to left will override data incorrectly
 
-   sub [todo_end_offset], TODO_SIZE ;decrease end offset by size of single TODO
+    sub [todo_end_offset], TODO_SIZE    ;decrease end offset by size of single TODO
 .overflow:
-   ret
+    ret
 
 load_todos:
-   ;; [rsp+8] - fd
-   ;; [rsp]   - st_size
+    ;; [rsp+8] - fd
+    ;; [rsp]   - st_size
 
-   ; make place on the stack for the file descriptor and size
-   ; (it grows towards lower addresses, hence decrement)
-   sub rsp, 16
-   mov qword [rsp+8], -1
-   mov qword [rsp], 0
+    ; make place on the stack for the file descriptor and size
+    ; (it grows towards lower addresses, hence decrement)
+    sub rsp, 16
+    mov qword [rsp+8], -1
+    mov qword [rsp], 0
 
-   ; at first step open file in read mode and store
-   ; it's file descriptor on second place in stack (rsp + 8)
-   open todo_db_file_path, O_RDONLY, 0
-   cmp rax, 0
-   jl .error
-   mov [rsp+8], rax
+    ; at first step open file in read mode and store
+    ; it's file descriptor on second place in stack (rsp + 8)
+    open todo_db_file_path, O_RDONLY, 0
+    cmp rax, 0
+    jl .error
+    mov [rsp+8], rax
 
 .error:
-   ; close open file and reset stack
-   ; (this will be executed also in case method is successful)
-   close [rsp+8]
-   add rsp, 16
-   ret
+    ; close open file and reset stack
+    ; (this will be executed also in case method is successful)
+    close [rsp+8]
+    add rsp, 16
+    ret
 
 save_todos:
     ; to be implemented
-   ret
+    ret
 
 ;; TODO: sanitize the input to prevent XSS
 ;; rdi - void *buf (title of Todo)
 ;; rsi - size_t count
 add_todo:
-   ;; Check for TODO capacity overflow
-   cmp qword [todo_end_offset], TODO_SIZE*TODO_CAP
-   jge .capacity_overflow
+    ;; Check for TODO capacity overflow
+    cmp qword [todo_end_offset], TODO_SIZE*TODO_CAP
+    jge .capacity_overflow
 
-   ;; Truncate strings longer than 255
-   mov rax, 0xFF
-   cmp rsi, rax
-   cmovg rsi, rax
+    ;; Truncate strings longer than 255
+    mov rax, 0xFF
+    cmp rsi, rax
+    cmovg rsi, rax
 
-   push rdi ;; void *buf [rsp+8]
-   push rsi ;; size_t count [rsp]
+    push rdi ;; void *buf [rsp+8]
+    push rsi ;; size_t count [rsp]
 
-   ;; +*******
-   ;;  ^
-   ;;  rdi
-   mov rdi, todo_begin          ; put todo_begin in rdi
-   add rdi, [todo_end_offset]   ; set rdi to end of already written todos
-   mov rdx, [rsp]               ; set size of title to rdx
-   mov byte [rdi], dl           ; set LSB of rdi to one from rds (size of the new element)
+    ;; +*******
+    ;;  ^
+    ;;  rdi
+    mov rdi, todo_begin         ; put todo_begin in rdi
+    add rdi, [todo_end_offset]  ; set rdi to end of already written todos
+    mov rdx, [rsp]              ; set size of title to rdx
+    mov byte [rdi], dl          ; set LSB of rdi to one from rds (size of the new element)
                                 ;    to make first byte of TODO memory the correct size of the element
-   inc rdi                      ; skip first byte, as it contains data about Todo's length;
+    inc rdi                     ; skip first byte, as it contains data about Todo's length;
                                 ;    copy the content after the length information
-   mov rsi, [rsp+8]             ; set pointer to title of Todo
-   call memcpy                  ; when called it will have:
+    mov rsi, [rsp+8]            ; set pointer to title of Todo
+    call memcpy                 ; when called it will have:
                                 ; - rsi (source) set to a pointer of new Todo
                                 ; - rdi (destination) set to a pointer in a todo list
                                 ;   that points to place for new element
                                 ; - rdx (size) set to a size of the new element
                                 ;   (limited to TODO_SIZE)
 
-   add [todo_end_offset], TODO_SIZE ; increase end offset by size of a Todo (TODO_SIZE)
+    add [todo_end_offset], TODO_SIZE    ; increase end offset by size of a Todo (TODO_SIZE)
 
-   pop rsi
-   pop rdi
-   mov rax, 0
-   ret
+    pop rsi
+    pop rdi
+    mov rax, 0
+    ret
 .capacity_overflow:
-   mov rax, 1
-   ret
+    mov rax, 1
+    ret
 
 render_todos_as_html:
     push 0
@@ -393,112 +393,112 @@ render_todos_as_html:
 
 segment readable writeable
 
-enable dd 1
-sockfd dq -1
-connfd dq -1
-servaddr servaddr_in
-sizeof_servaddr = $ - servaddr.sin_family
-cliaddr servaddr_in
-cliaddr_len dd sizeof_servaddr
+enable                          dd 1
+sockfd                          dq -1
+connfd                          dq -1
+servaddr                        servaddr_in
+sizeof_servaddr =               $ - servaddr.sin_family
+cliaddr                         servaddr_in
+cliaddr_len                     dd sizeof_servaddr
 
-crlf db 13, 10
+crlf                            db 13, 10
 
-error_400            db "HTTP/1.1 400 Bad Request", 13, 10
-                     db "Content-Type: text/html; charset=utf-8", 13, 10
-                     db "Connection: close", 13, 10
-                     db 13, 10
-                     db "<h1>Bad Request</h1>", 10
-                     db "<a href='/'>Back to Home</a>", 10
-                     db 0
-error_404            db "HTTP/1.1 404 Not found", 13, 10
-                     db "Content-Type: text/html; charset=utf-8", 13, 10
-                     db "Connection: close", 13, 10
-                     db 13, 10
-                     db "<h1>Page not found</h1>", 10
-                     db "<a href='/'>Back to Home</a>", 10
-                     db 0
-error_405            db "HTTP/1.1 405 Method Not Allowed", 13, 10
-                     db "Content-Type: text/html; charset=utf-8", 13, 10
-                     db "Connection: close", 13, 10
-                     db 13, 10
-                     db "<h1>Method not Allowed</h1>", 10
-                     db "<a href='/'>Back to Home</a>", 10
-                     db 0
-index_page_response  db "HTTP/1.1 200 OK", 13, 10
-                     db "Content-Type: text/html; charset=utf-8", 13, 10
-                     db "Connection: close", 13, 10
-                     db 13, 10
-                     db 0
-index_page_header    db "<h1>To-Do</h1>", 10
-                     db "<ul>", 10
-                     db 0
-index_page_footer    db "  <li>", 10
-                     db "    <form style='display: inline' method='post' action='/' enctype='text/plain'>", 10
-                     db "        <input style='width: 25px' type='submit' value='+'>", 10
-                     db "        <input type='text' name='todo' autofocus>", 10
-                     db "    </form>", 10
-                     db "  </li>", 10
-                     db "</ul>", 10
-                     db "<form method='post' action='/shutdown'>", 10
-                     db "    <input type='submit' value='shutdown'>", 10
-                     db "</form>", 10
-                     db 0
-todo_header          db "  <li>"
-                     db 0
-todo_footer          db "</li>", 10
-                     db 0
-delete_button_prefix db "<form style='display: inline' method='post' action='/'>"
-                     db "<button style='width: 25px' type='submit' name='delete' value='"
-                     db 0
-delete_button_suffix db "'>x</button></form> "
-                     db 0
-shutdown_response    db "HTTP/1.1 200 OK", 13, 10
-                     db "Content-Type: text/html; charset=utf-8", 13, 10
-                     db "Connection: close", 13, 10
-                     db 13, 10
-                     db "<h1>Shutting down the server...</h1>", 10
-                     db "Please close this tab"
-                     db 0
+error_400                       db "HTTP/1.1 400 Bad Request", 13, 10
+                                db "Content-Type: text/html; charset=utf-8", 13, 10
+                                db "Connection: close", 13, 10
+                                db 13, 10
+                                db "<h1>Bad Request</h1>", 10
+                                db "<a href='/'>Back to Home</a>", 10
+                                db 0
+error_404                       db "HTTP/1.1 404 Not found", 13, 10
+                                db "Content-Type: text/html; charset=utf-8", 13, 10
+                                db "Connection: close", 13, 10
+                                db 13, 10
+                                db "<h1>Page not found</h1>", 10
+                                db "<a href='/'>Back to Home</a>", 10
+                                db 0
+error_405                       db "HTTP/1.1 405 Method Not Allowed", 13, 10
+                                db "Content-Type: text/html; charset=utf-8", 13, 10
+                                db "Connection: close", 13, 10
+                                db 13, 10
+                                db "<h1>Method not Allowed</h1>", 10
+                                db "<a href='/'>Back to Home</a>", 10
+                                db 0
+index_page_response             db "HTTP/1.1 200 OK", 13, 10
+                                db "Content-Type: text/html; charset=utf-8", 13, 10
+                                db "Connection: close", 13, 10
+                                db 13, 10
+                                db 0
+index_page_header               db "<h1>To-Do</h1>", 10
+                                db "<ul>", 10
+                                db 0
+index_page_footer               db "  <li>", 10
+                                db "    <form style='display: inline' method='post' action='/' enctype='text/plain'>", 10
+                                db "        <input style='width: 25px' type='submit' value='+'>", 10
+                                db "        <input type='text' name='todo' autofocus>", 10
+                                db "    </form>", 10
+                                db "  </li>", 10
+                                db "</ul>", 10
+                                db "<form method='post' action='/shutdown'>", 10
+                                db "    <input type='submit' value='shutdown'>", 10
+                                db "</form>", 10
+                                db 0
+todo_header                     db "  <li>"
+                                db 0
+todo_footer                     db "</li>", 10
+                                db 0
+delete_button_prefix            db "<form style='display: inline' method='post' action='/'>"
+                                db "<button style='width: 25px' type='submit' name='delete' value='"
+                                db 0
+delete_button_suffix            db "'>x</button></form> "
+                                db 0
+shutdown_response               db "HTTP/1.1 200 OK", 13, 10
+                                db "Content-Type: text/html; charset=utf-8", 13, 10
+                                db "Connection: close", 13, 10
+                                db 13, 10
+                                db "<h1>Shutting down the server...</h1>", 10
+                                db "Please close this tab"
+                                db 0
 
-todo_form_data_prefix db "todo="
-todo_form_data_prefix_len = $ - todo_form_data_prefix
-delete_form_data_prefix db "delete="
-delete_form_data_prefix_len = $ - delete_form_data_prefix
+todo_form_data_prefix           db "todo="
+todo_form_data_prefix_len =     $ - todo_form_data_prefix
+delete_form_data_prefix         db "delete="
+delete_form_data_prefix_len =   $ - delete_form_data_prefix
 
-get db "GET "
-get_len = $ - get
-post db "POST "
-post_len = $ - post
+get                             db "GET "
+get_len =                       $ - get
+post                            db "POST "
+post_len =                      $ - post
 
-index_route db "/ "
-index_route_len = $ - index_route
+index_route                     db "/ "
+index_route_len =               $ - index_route
 
-shutdown_route db "/shutdown "
-shutdown_route_len = $ - shutdown_route
+shutdown_route                  db "/shutdown "
+shutdown_route_len =            $ - shutdown_route
 
-new_line                db 10, 0
-start                   db "INFO: Starting Web Server!", 10, 0
-ok_msg                  db "INFO: OK!", 10, 0
-socket_trace_msg        db "INFO: Creating a socket...", 10, 0
-bind_trace_msg          db "INFO: Binding the socket...", 10, 0
-listen_trace_msg        db "INFO: Listening to the socket...", 10, 0
-accept_trace_msg        db "INFO: Waiting for client connections...", 10, 0
-executing_command_msg   db "INFO: Executing command: ", 0
-error_msg               db "FATAL ERROR!", 10, 0
+new_line                        db 10, 0
+start                           db "INFO: Starting Web Server!", 10, 0
+ok_msg                          db "INFO: OK!", 10, 0
+socket_trace_msg                db "INFO: Creating a socket...", 10, 0
+bind_trace_msg                  db "INFO: Binding the socket...", 10, 0
+listen_trace_msg                db "INFO: Listening to the socket...", 10, 0
+accept_trace_msg                db "INFO: Waiting for client connections...", 10, 0
+executing_command_msg           db "INFO: Executing command: ", 0
+error_msg                       db "FATAL ERROR!", 10, 0
 
-todo_db_file_path db "todo.db", 0
+todo_db_file_path               db "todo.db", 0
 
-request_len rq 1
-request_cur rq 1
-request     rb REQUEST_CAP
+request_len                     rq 1
+request_cur                     rq 1
+request                         rb REQUEST_CAP
 
 ;; [todo][todo][todo][todo][todo][todo]...
 ;;             ^
-todo_begin  db 4,"d","e","f","g",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-            db 1,"b",  0,  0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-            db 2,"c","d",  0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
-            db 4,"e","f","g","h",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+todo_begin                      db 4,"d","e","f","g",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+                                db 1,"b",  0,  0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+                                db 2,"c","d",  0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+                                db 4,"e","f","g","h",0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 repeat 252
-            db 1,"i",  0,  0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+                                db 1,"i",  0,  0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 end repeat
-todo_end_offset dq TODO_SIZE * 20
+todo_end_offset                 dq TODO_SIZE * 20
