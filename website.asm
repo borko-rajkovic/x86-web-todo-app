@@ -299,7 +299,7 @@ load_todos:
     ; it's file descriptor on second place in stack (rsp + 8)
     open todo_db_file_path, O_RDONLY, 0
     cmp rax, 0
-    jl .error
+    jl .error           ; this will happen if file does not exists or permissions are not granted
     mov [rsp+8], rax
 
 .error:
