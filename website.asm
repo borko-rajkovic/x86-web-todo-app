@@ -323,6 +323,12 @@ load_todos:
     cmp rax, rcx
     cmovg rax, rcx
     mov [rsp], rax
+
+    ;; Read the entire db from file system
+    read [rsp+8], todo_begin, [rsp]             ; read the content from the file to a todo list (todo_begin)
+    mov rax, [rsp]
+    mov [todo_end_offset], rax                  ; set end offset
+
 .error:
     ; close open file and reset stack
     ; (this will be executed also in case method is successful)
