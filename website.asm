@@ -311,6 +311,11 @@ load_todos:
     mov rax, [rax]          ; take value from st_size to rax
     mov [rsp], rax          ; place st_size value to stack
 
+    ;; Check if the size of db is divisible by TODO_SIZE
+    mov rcx, TODO_SIZE
+    div rcx
+    cmp rdx, 0
+    jne .error
 .error:
     ; close open file and reset stack
     ; (this will be executed also in case method is successful)
