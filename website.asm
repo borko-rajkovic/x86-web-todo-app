@@ -286,7 +286,27 @@ delete_todo:
    ret
 
 load_todos:
-   ; to be implemented
+   ;; [rsp+8] - fd
+   ;; [rsp]   - st_size
+
+   ; make place on the stack for the file descriptor and size
+   ; (it grows towards lower addresses, hence decrement)
+   sub rsp, 16
+   mov qword [rsp+8], -1
+   mov qword [rsp], 0
+
+   ; at first step open file in read mode and store
+   ; it's file descriptor on second place in stack (rsp + 8)
+   open todo_db_file_path, O_RDONLY, 0
+   cmp rax, 0
+   jl .error
+   mov [rsp+8], rax
+
+.error:
+   ; close open file and reset stack
+   ; (this will be executed also in case method is successful)
+   close [rsp+8]
+   add rsp, 16
    ret
 
 save_todos:
@@ -465,6 +485,8 @@ listen_trace_msg        db "INFO: Listening to the socket...", 10, 0
 accept_trace_msg        db "INFO: Waiting for client connections...", 10, 0
 executing_command_msg   db "INFO: Executing command: ", 0
 error_msg               db "FATAL ERROR!", 10, 0
+
+todo_db_file_path db "todo.db", 0
 
 request_len rq 1
 request_cur rq 1

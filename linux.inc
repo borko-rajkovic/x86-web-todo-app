@@ -1,6 +1,7 @@
 ;; Linux related constants and macros
 
 SYS_read equ 0
+SYS_open equ 2
 SYS_write equ 1
 SYS_exit equ 60
 SYS_socket equ 41
@@ -9,6 +10,8 @@ SYS_bind equ 49
 SYS_listen equ 50
 SYS_close equ 3
 SYS_setsockopt equ 54
+
+O_RDONLY = 0
 
 AF_INET equ 2
 SOCK_STREAM equ 1
@@ -129,6 +132,12 @@ macro accept sockfd, addr, addrlen
 macro exit code
 {
     syscall1 SYS_exit, code
+}
+
+;; int open(const char *pathname, int flags, mode_t mode);
+macro open filename, flags, mode
+{
+    syscall3 SYS_open, filename, flags, mode
 }
 
 ;; db - 1 byte -  8 bits
