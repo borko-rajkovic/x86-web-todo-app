@@ -13,6 +13,9 @@ SYS_setsockopt equ 54
 SYS_fstat64 equ 5
 
 O_RDONLY = 0
+O_WRONLY = 1
+O_CREAT = 64
+O_TRUNC = 512
 
 AF_INET equ 2
 SOCK_STREAM equ 1

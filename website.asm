@@ -337,7 +337,11 @@ load_todos:
     ret
 
 save_todos:
-    ; to be implemented
+    open todo_db_file_path, O_CREAT or O_WRONLY or O_TRUNC, 420
+    cmp rax, 0
+    jl .fail
+    ; do the actual save here
+.fail:
     ret
 
 ;; TODO: sanitize the input to prevent XSS
