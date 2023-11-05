@@ -10,6 +10,7 @@ SYS_bind equ 49
 SYS_listen equ 50
 SYS_close equ 3
 SYS_setsockopt equ 54
+SYS_fstat64 equ 5
 
 O_RDONLY = 0
 
@@ -26,6 +27,42 @@ STDERR equ 2
 
 EXIT_SUCCESS equ 0
 EXIT_FAILURE equ 1
+
+; struct stat64 {
+; 	unsigned long long	st_dev;
+; 	unsigned char	__pad0[4];
+
+; 	unsigned long	__st_ino;
+
+; 	unsigned int	st_mode;
+; 	unsigned int	st_nlink;
+
+; 	unsigned long	st_uid;
+; 	unsigned long	st_gid;
+
+; 	unsigned long long	st_rdev;
+; 	unsigned char	__pad3[4];
+
+; 	long long	st_size;
+; 	unsigned long	st_blksize;
+
+; 	/* Number 512-byte blocks allocated. */
+; 	unsigned long long	st_blocks;
+
+; 	unsigned long	st_atime;
+; 	unsigned long	st_atime_nsec;
+
+; 	unsigned long	st_mtime;
+; 	unsigned int	st_mtime_nsec;
+
+; 	unsigned long	st_ctime;
+; 	unsigned long	st_ctime_nsec;
+
+; 	unsigned long long	st_ino;
+; };
+
+sizeof_stat64 = 144
+stat64.st_size = 48 ; offset to start of st_size in stat64
 
 macro funcall2 func, a, b
 {
@@ -159,9 +196,14 @@ struc servaddr_in
     .sin_zero   dq 0
 }
 
-; int setsockopt(int sockfd, int level, int optname, const void *optval, socklen_t optlen);
+;; int setsockopt(int sockfd, int level, int optname, const void *optval, socklen_t optlen);
 macro setsockopt sockfd, level, optname, optval, optlen
 {
     syscall5 SYS_setsockopt, sockfd, level, optname, optval, optlen
 }
 
+;; int fstat(int fd, struct stat *statbuf);
+macro fstat64 fd, statbuf
+{
+    syscall2 SYS_fstat64, fd, statbuf
+} 

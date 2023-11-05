@@ -302,6 +302,15 @@ load_todos:
     jl .error           ; this will happen if file does not exists or permissions are not granted
     mov [rsp+8], rax
 
+    fstat64 [rsp+8], statbuf
+    cmp rax, 0
+    jl .error
+
+    mov rax, statbuf
+    add rax, stat64.st_size ; point to st_size
+    mov rax, [rax]          ; take value from st_size to rax
+    mov [rsp], rax          ; place st_size value to stack
+
 .error:
     ; close open file and reset stack
     ; (this will be executed also in case method is successful)
@@ -502,3 +511,5 @@ repeat 252
                                 db 1,"i",  0,  0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 end repeat
 todo_end_offset                 dq TODO_SIZE * 20
+
+statbuf                         rb sizeof_stat64
